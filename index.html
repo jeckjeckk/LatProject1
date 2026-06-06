@@ -1,3 +1,400 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:77170e72982a12e4b1f6db94f4e5274932dd9e491c883b81bad4456ee0d06665
-size 19905
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V8 Engine — Exploded View</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#080c10;color:#c8d8e8;font-family:'Rajdhani',sans-serif;overflow:hidden;height:100vh;width:100vw;cursor:crosshair;}
+  #c{position:fixed;inset:0;}
+
+  #header{position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(8,12,16,0.95),transparent);pointer-events:none;}
+  .htitle{font-family:'Share Tech Mono',monospace;font-size:.75rem;letter-spacing:.2em;color:#4af0c0;text-transform:uppercase;opacity:.8;}
+  .htitle span{color:#fff;font-size:1.1rem;display:block;letter-spacing:.1em;font-family:'Rajdhani',sans-serif;font-weight:700;}
+  .hstat{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:#4af0c0;text-align:right;opacity:.7;}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#4af0c0;margin-right:6px;animation:blink 1.5s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+  #loading{position:fixed;inset:0;z-index:200;background:#080c10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;transition:opacity .8s;}
+  #loading.hidden{opacity:0;pointer-events:none;}
+  .ltitle{font-family:'Share Tech Mono',monospace;font-size:.75rem;letter-spacing:.3em;color:#4af0c0;text-transform:uppercase;}
+  .lbar-w{width:260px;height:2px;background:rgba(74,240,192,.15);border-radius:2px;overflow:hidden;}
+  .lbar{height:100%;background:#4af0c0;width:0%;transition:width .2s;box-shadow:0 0 8px #4af0c0;}
+  .lpct{font-family:'Share Tech Mono',monospace;font-size:2rem;color:#fff;font-weight:700;}
+
+  .label-wrapper{pointer-events:none;user-select:none;position:relative;}
+  .lline{position:absolute;bottom:100%;left:50%;width:1px;height:22px;background:linear-gradient(to top,rgba(74,240,192,.7),transparent);transform:translateX(-50%);}
+  .lbox{background:rgba(6,10,16,.9);border:1px solid rgba(74,240,192,.55);border-radius:3px;padding:3px 9px;font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.15em;color:#4af0c0;text-transform:uppercase;white-space:nowrap;opacity:0;transform:translateY(5px);transition:opacity .45s,transform .45s;box-shadow:0 0 14px rgba(74,240,192,.18);}
+  .lbox.on{opacity:1;transform:translateY(0);}
+
+  #info{position:fixed;top:50%;right:1.5rem;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:.5rem;pointer-events:none;}
+  .irow{font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:rgba(74,240,192,.4);text-align:right;text-transform:uppercase;}
+  .irow span{color:rgba(200,216,232,.6);}
+
+  #btn{position:fixed;bottom:2rem;right:1.5rem;z-index:100;background:rgba(8,12,16,.75);border:1px solid rgba(74,240,192,.4);color:#4af0c0;font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.15em;padding:.65rem 1.3rem;text-transform:uppercase;cursor:pointer;transition:all .3s;backdrop-filter:blur(4px);}
+  #btn:hover{background:rgba(74,240,192,.1);border-color:#4af0c0;box-shadow:0 0 22px rgba(74,240,192,.25);}
+
+  #hint{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:100;font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.2em;color:rgba(200,216,232,.3);text-transform:uppercase;pointer-events:none;white-space:nowrap;}
+
+  .corner{position:fixed;z-index:100;width:24px;height:24px;pointer-events:none;opacity:.35;}
+  .corner::before,.corner::after{content:'';position:absolute;background:#4af0c0;}
+  .corner::before{width:100%;height:1px;top:0;}.corner::after{width:1px;height:100%;top:0;}
+  .tl{top:1rem;left:1rem;}.tr{top:1rem;right:1rem;transform:scaleX(-1);}
+  .bl{bottom:1rem;left:1rem;transform:scaleY(-1);}.br{bottom:1rem;right:1rem;transform:scale(-1);}
+</style>
+</head>
+<body>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+
+<div id="loading">
+  <div class="ltitle">Loading V8 Engine Model</div>
+  <div class="lpct" id="lpct">0%</div>
+  <div class="lbar-w"><div class="lbar" id="lbar"></div></div>
+</div>
+
+<div id="header">
+  <div class="htitle">V8 Engine Block<span>Exploded View System</span></div>
+  <div class="hstat">
+    <div><span class="dot"></span>MODEL LOADED</div>
+    <div id="statelbl" style="margin-top:4px">STATE: ASSEMBLED</div>
+  </div>
+</div>
+
+<div id="info">
+  <div class="irow">Rotate <span>DRAG</span></div>
+  <div class="irow">Zoom <span>SCROLL</span></div>
+  <div class="irow">Explode <span>CLICK / BTN</span></div>
+</div>
+
+<div id="c"></div>
+<div id="hint">[ click engine to explode / reassemble ]</div>
+<button id="btn">⊕ Explode View</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════
+//  V8 ENGINE EXPLODED VIEW
+//  Node names mapped from disassembled_v8_engine_block.glb
+// ══════════════════════════════════════════════════
+
+const container = document.getElementById('c');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x080c10);
+scene.fog = new THREE.FogExp2(0x080c10, 0.025);
+
+const W = window.innerWidth, H = window.innerHeight;
+const camera = new THREE.PerspectiveCamera(45, W/H, 0.001, 500);
+camera.position.set(0, 2, 6);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.3;
+container.appendChild(renderer.domElement);
+
+const labelRenderer = new THREE.CSS2DRenderer();
+labelRenderer.setSize(W, H);
+labelRenderer.domElement.style.cssText = 'position:absolute;top:0;pointer-events:none;';
+container.appendChild(labelRenderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 0.5;
+controls.maxDistance = 30;
+
+// Lights
+scene.add(new THREE.AmbientLight(0x304060, 0.8));
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(5,8,5); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048); scene.add(key);
+const fill = new THREE.DirectionalLight(0x4af0c0, 0.4);
+fill.position.set(-5,3,-4); scene.add(fill);
+scene.add(new THREE.DirectionalLight(0x8080ff, 0.3)).position.set(0,-4,-5);
+const grid = new THREE.GridHelper(30,50,0x1a2a3a,0x0d1520);
+scene.add(grid);
+
+// ══════════════════════════════════════════════════
+//  NODE NAME → LABEL + EXPLODE OFFSET MAP
+//  (dipetakan dari nama node file GLB asli)
+//  Setiap grup komponen punya label dan arah explode
+// ══════════════════════════════════════════════════
+const NODE_MAP = {
+  // Blok utama mesin
+  'UZ SITO VISOS PLOKSTELES VAZINES_44': { label:'Engine Block',      ex:{x:0,    y:0,    z:0   }, ly:0.6 },
+  // Kepala silinder
+  'Galvos dangtelis_30':  { label:'Valve Cover',        ex:{x:0,    y:2.8,  z:0   }, ly:0.5 },
+  'galvos tangtelis_29':  { label:'Cylinder Head',      ex:{x:0,    y:1.8,  z:0   }, ly:0.5 },
+  // Camshaft
+  'Velenas.001_35':       { label:'Camshaft',            ex:{x:0,    y:2.2,  z:0   }, ly:0.5 },
+  // Piston & rod group (Cylinder.004 = piston assembly)
+  'Cylinder.004_0':       { label:'Piston #1',          ex:{x:-2.2, y:0.8,  z:0   }, ly:0.5 },
+  'Cylinder.037_3':       { label:'Piston #2',          ex:{x:-2.2, y:0.8,  z:0.6 }, ly:0.5 },
+  'Cylinder.039_4':       { label:'Piston #3',          ex:{x:-2.2, y:0.8,  z:-0.6}, ly:0.5 },
+  'Cylinder.041_5':       { label:'Piston #4',          ex:{x:-2.2, y:0.8,  z:1.2 }, ly:0.5 },
+  'Cylinder.025_8':       { label:'Piston #5',          ex:{x:2.2,  y:0.8,  z:0   }, ly:0.5 },
+  'Cylinder.027_11':      { label:'Piston #6',          ex:{x:2.2,  y:0.8,  z:0.6 }, ly:0.5 },
+  'Cylinder.030_13':      { label:'Piston #7',          ex:{x:2.2,  y:0.8,  z:-0.6}, ly:0.5 },
+  'Cylinder.032_15':      { label:'Piston #8',          ex:{x:2.2,  y:0.8,  z:1.2 }, ly:0.5 },
+  // Valves (voztuvas = valve, Lithuanian)
+  'voztuvas_9':           { label:'Intake Valve',        ex:{x:-1.6, y:2.4,  z:0   }, ly:0.4 },
+  'voztuvas.001_12':      { label:'Intake Valve 2',      ex:{x:-1.6, y:2.4,  z:0.5 }, ly:0.4 },
+  'voztuvas.002_14':      { label:'Exhaust Valve',       ex:{x:1.6,  y:2.4,  z:0   }, ly:0.4 },
+  'voztuvas.003_16':      { label:'Exhaust Valve 2',     ex:{x:1.6,  y:2.4,  z:0.5 }, ly:0.4 },
+  'voztuvas.004_18':      { label:'Valve 5',             ex:{x:-1.8, y:2.6,  z:-0.5}, ly:0.4 },
+  'voztuvas.005_21':      { label:'Valve 6',             ex:{x:1.8,  y:2.6,  z:-0.5}, ly:0.4 },
+  'voztuvas.006_23':      { label:'Valve 7',             ex:{x:-2.0, y:2.8,  z:1.0 }, ly:0.4 },
+  // Valve springs (spiruoklytes = spring)
+  'spiruoklytes_2':       { label:'Valve Springs',       ex:{x:-1.2, y:1.8,  z:0   }, ly:0.4 },
+  'spiruklytes_25':       { label:'Valve Springs 2',     ex:{x:1.2,  y:1.8,  z:0   }, ly:0.4 },
+  // Valve seats (koja = stem/seat)
+  'voztuvo koja_7':       { label:'Valve Stem',          ex:{x:-1.0, y:1.6,  z:0.3 }, ly:0.4 },
+  'voztuvo koja.001_10':  { label:'Valve Stem 2',        ex:{x:-1.0, y:1.6,  z:0.8 }, ly:0.4 },
+  'voztuvo koja.004_17':  { label:'Valve Stem 3',        ex:{x:1.0,  y:1.6,  z:0.3 }, ly:0.4 },
+  'voztuvo koja.007_24':  { label:'Valve Stem 4',        ex:{x:1.0,  y:1.6,  z:0.8 }, ly:0.4 },
+  // Crankshaft
+  'Skriejiko dantratis.000_36': { label:'Crankshaft',    ex:{x:0,    y:-1.6, z:0   }, ly:0.5 },
+  // Connecting rods
+  'Cylinder.049_26':      { label:'Con Rod 1',           ex:{x:-1.4, y:-0.6, z:0   }, ly:0.4 },
+  'Cylinder.056_27':      { label:'Con Rod 2',           ex:{x:1.4,  y:-0.6, z:0   }, ly:0.4 },
+  // Timing gear/chain
+  'Circle.002_32':        { label:'Timing Gear',         ex:{x:0,    y:0,    z:-2.0 }, ly:0.5 },
+  'Cylinder.066_33':      { label:'Timing Chain',        ex:{x:0.4,  y:0,    z:-2.2 }, ly:0.5 },
+  'Cylinder.067_34':      { label:'Cam Gear',            ex:{x:-0.4, y:1.0,  z:-2.2 }, ly:0.5 },
+  // Oil filter (TEPALO FILTRAS)
+  'TEPALO FILTRAS_28':    { label:'Oil Filter',          ex:{x:2.4,  y:-0.5, z:1.0 }, ly:0.5 },
+  'tepalo filtro sudukas.001_39': { label:'Oil Filter Hsg', ex:{x:2.6,y:-0.5,z:1.4 }, ly:0.4 },
+  // Belt (Dirzas = belt)
+  'Dir\u0017Eas_31':      { label:'Drive Belt',          ex:{x:0,    y:0.5,  z:-2.6 }, ly:0.5 },
+  // Spark plugs (ZVAKES = spark plugs)
+  'ZVAKES_37':            { label:'Spark Plugs (L)',      ex:{x:-2.8, y:1.2,  z:0   }, ly:0.5 },
+  '\u017DVAKES_38':       { label:'Spark Plugs (R)',      ex:{x:2.8,  y:1.2,  z:0   }, ly:0.5 },
+  // Front assembly
+  'Priekin\u0117 detal\u0117.001_45': { label:'Front Cover', ex:{x:0,y:0,z:-3.0}, ly:0.5 },
+  // Cylinder rows
+  'Cylinder.001_46':      { label:'Cylinder Row L',       ex:{x:-1.8, y:0,    z:0   }, ly:0.5 },
+  'Cylinder.000_47':      { label:'Cylinder Row R',       ex:{x:1.8,  y:0,    z:0   }, ly:0.5 },
+  'Cylinder.002_48':      { label:'Cylinder Bank',        ex:{x:0,    y:-0.8, z:0.5 }, ly:0.5 },
+  // Gaskets / plates (Plane = gasket)
+  'Plane.012_40':         { label:'Head Gasket',          ex:{x:0,    y:1.2,  z:0   }, ly:0.4 },
+  'Plane.030_41':         { label:'Gasket L',             ex:{x:-0.5, y:1.1,  z:0.2 }, ly:0.4 },
+  'Plane.031_42':         { label:'Gasket R',             ex:{x:0.5,  y:1.1,  z:0.2 }, ly:0.4 },
+  'Plane.051_43':         { label:'Base Gasket',          ex:{x:0,    y:-1.2, z:0   }, ly:0.4 },
+  'Plane.052_51':         { label:'Side Gasket',          ex:{x:0,    y:0,    z:1.8 }, ly:0.4 },
+  // Bolts (VARZTAS = bolt) — grouped together, spread outward
+  'VARZTAS.003_52':       { label:'Bolt',   ex:{x:-1.0, y:2.0,  z:-0.5}, ly:0.3 },
+  'VARZTAS.031_53':       { label:'Bolt',   ex:{x:1.0,  y:2.0,  z:-0.5}, ly:0.3 },
+  'VARZTAS.032_54':       { label:'Bolt',   ex:{x:-1.5, y:1.8,  z:0.5 }, ly:0.3 },
+  'VARZTAS.041_55':       { label:'Bolt',   ex:{x:1.5,  y:1.8,  z:0.5 }, ly:0.3 },
+  'VARZTAS.043_56':       { label:'Bolt',   ex:{x:-1.0, y:1.6,  z:-1.0}, ly:0.3 },
+  'VARZTAS.045_57':       { label:'Bolt',   ex:{x:1.0,  y:1.6,  z:-1.0}, ly:0.3 },
+  'VARZTAS.052_58':       { label:'Bolt',   ex:{x:-2.0, y:0.5,  z:0.5 }, ly:0.3 },
+  'VARZTAS.053_59':       { label:'Bolt',   ex:{x:2.0,  y:0.5,  z:0.5 }, ly:0.3 },
+  'VARZTAS.055_60':       { label:'Bolt',   ex:{x:-2.0, y:-0.5, z:-0.5}, ly:0.3 },
+  'VARZTAS.056_61':       { label:'Bolt',   ex:{x:2.0,  y:-0.5, z:-0.5}, ly:0.3 },
+  'VARZTAS.057_62':       { label:'Bolt',   ex:{x:-1.5, y:-1.0, z:1.0 }, ly:0.3 },
+  'VARZTAS.059_63':       { label:'Bolt',   ex:{x:1.5,  y:-1.0, z:1.0 }, ly:0.3 },
+  'VARZTAS.061_64':       { label:'Bolt',   ex:{x:-1.0, y:-1.5, z:-0.5}, ly:0.3 },
+  'VARZTAS.063_65':       { label:'Bolt',   ex:{x:1.0,  y:-1.5, z:-0.5}, ly:0.3 },
+  'VARZTAS.064_66':       { label:'Bolt',   ex:{x:-0.5, y:-1.8, z:1.5 }, ly:0.3 },
+  'VARZTAS.070_67':       { label:'Bolt',   ex:{x:0.5,  y:-1.8, z:1.5 }, ly:0.3 },
+  'VARZTAS.076_69':       { label:'Bolt',   ex:{x:-1.8, y:1.0,  z:-1.5}, ly:0.3 },
+  'VARZTAS.079_70':       { label:'Bolt',   ex:{x:1.8,  y:1.0,  z:-1.5}, ly:0.3 },
+  'VARZTAS.000_71':       { label:'Bolt',   ex:{x:0,    y:-2.0, z:-1.0}, ly:0.3 },
+};
+
+// STATE
+let isExploded = false, isAnimating = false;
+let engineGroup = null;
+const nodeDataMap = new Map(); // THREE.Object3D → {origPos, explodeOffset, label}
+
+// Label factory
+function mkLabel(text, ly=0.5) {
+  const d = document.createElement('div');
+  d.className = 'label-wrapper';
+  d.innerHTML = `<div class="lline"></div><div class="lbox">${text}</div>`;
+  const o = new THREE.CSS2DObject(d);
+  o.position.set(0, ly, 0);
+  return o;
+}
+function showLabels(v) {
+  document.querySelectorAll('.lbox').forEach((el,i) =>
+    setTimeout(() => el.classList.toggle('on', v), v ? i*40 : 0));
+}
+
+// ── LOAD GLB ──────────────────────────────────────
+const loader = new THREE.GLTFLoader();
+loader.load(
+  './disassembled_v8_engine_block.glb',
+  (gltf) => {
+    engineGroup = new THREE.Group();
+
+    // Scale & center
+    const bbox = new THREE.Box3().setFromObject(gltf.scene);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 4.0 / maxDim;
+    gltf.scene.scale.setScalar(scale);
+
+    // Re-center
+    bbox.setFromObject(gltf.scene);
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    gltf.scene.position.sub(center);
+
+    // Move grid down
+    bbox.setFromObject(gltf.scene);
+    grid.position.y = bbox.min.y - 0.1;
+
+    // Traverse and map nodes
+    gltf.scene.traverse(obj => {
+      const cfg = NODE_MAP[obj.name];
+      if (!cfg) return;
+
+      // origPos in world → convert to local after adding to group
+      const origPos = obj.position.clone();
+      const label = mkLabel(cfg.label, cfg.ly);
+      obj.add(label);
+
+      nodeDataMap.set(obj, {
+        origPos,
+        ex: cfg.ex,
+        label,
+      });
+    });
+
+    // Also give meshes shadow
+    gltf.scene.traverse(child => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    engineGroup.add(gltf.scene);
+    scene.add(engineGroup);
+
+    // Adjust camera
+    camera.position.set(0, 2, 7);
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    hideLoading();
+  },
+  (prog) => {
+    const pct = prog.total ? Math.round(prog.loaded/prog.total*100) : 0;
+    document.getElementById('lpct').textContent = pct + '%';
+    document.getElementById('lbar').style.width = pct + '%';
+  },
+  (err) => {
+    console.error('GLB load error:', err);
+    document.getElementById('lpct').textContent = 'ERROR';
+    document.querySelector('.ltitle').textContent = 'File tidak ditemukan — taruh GLB di folder yang sama';
+  }
+);
+
+function hideLoading() {
+  document.getElementById('lpct').textContent = '100%';
+  document.getElementById('lbar').style.width = '100%';
+  setTimeout(() => {
+    const el = document.getElementById('loading');
+    el.classList.add('hidden');
+    setTimeout(() => el.remove(), 900);
+  }, 500);
+}
+
+// ══════════════════════════════════════════════════
+//  EXPLODE / REASSEMBLE
+// ══════════════════════════════════════════════════
+function explode() {
+  if (isAnimating || !engineGroup) return;
+  isAnimating = true;
+  let done = 0;
+  const total = nodeDataMap.size || 1;
+
+  const finish = () => { done++; if (done >= total) isAnimating = false; };
+
+  if (!isExploded) {
+    // Stop idle rotation before explode
+    nodeDataMap.forEach((data, obj) => {
+      const {origPos, ex} = data;
+      gsap.to(obj.position, {
+        x: origPos.x + ex.x,
+        y: origPos.y + ex.y,
+        z: origPos.z + ex.z,
+        duration: 2.2,
+        ease: 'power2.out',
+        onComplete: finish,
+      });
+    });
+    setTimeout(() => showLabels(true), 2000);
+    isExploded = true;
+    document.getElementById('statelbl').textContent = 'STATE: EXPLODED';
+    document.getElementById('btn').textContent = '⊖ Reassemble';
+  } else {
+    showLabels(false);
+    nodeDataMap.forEach((data, obj) => {
+      const {origPos} = data;
+      gsap.to(obj.position, {
+        x: origPos.x,
+        y: origPos.y,
+        z: origPos.z,
+        duration: 1.8,
+        ease: 'power3.inOut',
+        onComplete: finish,
+      });
+    });
+    isExploded = false;
+    document.getElementById('statelbl').textContent = 'STATE: ASSEMBLED';
+    document.getElementById('btn').textContent = '⊕ Explode View';
+  }
+}
+
+// Raycaster
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+renderer.domElement.addEventListener('click', e => {
+  if (!engineGroup) return;
+  mouse.x =  (e.clientX/innerWidth)*2-1;
+  mouse.y = -(e.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse, camera);
+  const meshes = [];
+  engineGroup.traverse(c => { if (c.isMesh) meshes.push(c); });
+  if (ray.intersectObjects(meshes, true).length > 0) explode();
+});
+document.getElementById('btn').addEventListener('click', explode);
+
+// Resize
+window.addEventListener('resize', () => {
+  const W=innerWidth, H=innerHeight;
+  camera.aspect = W/H; camera.updateProjectionMatrix();
+  renderer.setSize(W,H); labelRenderer.setSize(W,H);
+});
+
+// Render loop
+let idle = 0;
+function tick() {
+  requestAnimationFrame(tick);
+  controls.update();
+  if (engineGroup && !isExploded && !isAnimating) {
+    idle += 0.003;
+    engineGroup.rotation.y = idle;
+  }
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+tick();
+</script>
+</body>
+</html>
